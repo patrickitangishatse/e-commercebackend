@@ -1,109 +1,133 @@
-from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import render, get_object_or_404
-from rest_framework.decorators import api_view, schema
-from rest_framework.response import Response
-from rest_framework import status
-from .models import Product
-from .serializer import ProductSerializer, UserSerializer
-from drf_yasg.utils import swagger_auto_schema
+from .models import Product, Category, Cart, CartItems
+from .serializers import ProductSerializer, CategorySerializer, CartSerializer, CartItemsSerializer
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
 
-# Swagger decorations for api_products
-@swagger_auto_schema(
-    method='get', 
-    operation_description='Get a list of products',
-    responses={200: ProductSerializer(many=True)}
-)
-@swagger_auto_schema(
-    method='post', 
-    operation_description='Create a new product',
-    request_body=ProductSerializer,
-    responses={201: ProductSerializer()}
-)
-@api_view(['GET', 'POST'])
-def api_products(request):
-    if request.method == "GET":
-        products = Product.objects.all()
-        serializer = ProductSerializer(products, many=True)
-        return Response(serializer.data)
 
-    if request.method == "POST":
-        serializer = ProductSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-# Swagger decorations for api_product
-@swagger_auto_schema(
-    method='get', 
-    operation_description='Get details of a product',
-    responses={200: ProductSerializer()}
-)
-@swagger_auto_schema(
-    method='put', 
-    operation_description='Update details of a product',
-    request_body=ProductSerializer,
-    responses={200: ProductSerializer()}
-)
-@swagger_auto_schema(
-    method='delete', 
-    operation_description='Delete a product',
-    responses={204: 'No Content'}
-)
-@api_view(['GET', 'PUT', 'DELETE'])
-def api_product(request, pk):
-    product = get_object_or_404(Product, id=pk)
+# Create your views here.
 
-    if request.method == "GET":
-        serializer = ProductSerializer(product, many=False)
-        return Response(serializer.data)
 
-    if request.method == "PUT":
-        serializer = ProductSerializer(product, data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+# All Products
+class CreateProduct(ListCreateAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ['category']
+    search_fields = ['name', 'description']
+    pagination_class = PageNumberPagination
 
-    if request.method == "DELETE":
-        product.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+# Get Single Product and Update,Delete Product
+class ProductDetail(RetrieveUpdateDestroyAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    lookup_field = "pk"
 
-# Other views with Swagger decorations can be added here
 
-@api_view(['POST'])
-def register_user(request):
-    serializer = UserSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    serializer.save()
-    return Response(serializer.data, status=status.HTTP_201_CREATED)
+# Get all Category and Create Category
+class CreateCategory(ListCreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer  
 
-@api_view(['POST'])
-def user_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    user = authenticate(request, username=username, password=password)
 
-    if user is not None:
-        login(request, user)
-        return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
-    else:
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+# Get Single Category and Update,Delete Category
+class CategoryDetail(RetrieveUpdateDestroyAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    lookup_field = "pk"
 
-@api_view(['POST'])
-def user_logout(request):
-    logout(request)
-    return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
 
-@api_view(['POST'])
-def add_to_cart(request):
-    # Add your logic to add a product to the user's cart
-    return Response({'message': 'Product added to cart successfully'}, status=status.HTTP_200_OK)
+# Get all Cart and Create Cart
+class CartListView(ListCreateAPIView):
+    queryset = Cart.objects.all()
+    serializer_class = CartSerializer
 
-@api_view(['POST'])
-def checkout(request):
-    # Add your logic for the checkout process
-    return Response({'message': 'Checkout successful'}, status=status.HTTP_200_OK)
+# Get Single Cart and Update,Delete Cart
 
-@api_view(['POST'])
-def make_payment(request):
-    # Add your logic for processing payment
-    return Response({'message': 'Payment successful'}, status=status.HTTP_200_OK)
+class CartDetail(RetrieveUpdateDestroyAPIView):
+    queryset = Cart.objects.all()
+    serializer_class = CartSerializer
+    lookup_field = "pk"
+
+class CartItems(ListCreateAPIView):
+    queryset = CartItems.objects.all()
+    serializer_class = CartItemsSerializer
+
+
+
+
+# @api_view(['GET','POST'])
+# def Products(request):
+#     if request.method == 'GET':
+#         products = Product.objects.all()
+#         serializer = ProductSerializer(products, many=True)
+#         return Response(serializer.data)
+    
+#     if request.method == 'POST':
+#         serializer = ProductSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=201)
+#         return Response(serializer.errors, status=400)
+
+
+
+
+# @api_view(['GET','PUT','DELETE'])
+# def ProductDetail(request,pk):
+#     if request.method == 'GET':
+#         product = Product.objects.get(id=pk)
+#         serializer = ProductSerializer(product)
+#         return Response(serializer.data)
+    
+#     if request.method=="PUT":
+#         product=Product.objects.get(id=pk)
+#         serializer=ProductSerializer(product,data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
+    
+#     if request.method=="DELETE":
+#         product=Product.objects.get(id=pk)
+#         product.delete()
+#         return Response(status=204)
+
+
+
+# @api_view(['GET','POST'])
+# def Categories(request):
+#     if request.method == 'GET':
+#         categories = Category.objects.all()
+#         serializer = CategorySerializer(categories, many=True)
+#         return Response(serializer.data)
+    
+#     if request.method == 'POST':
+#         serializer = CategorySerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data, status=201)
+#         return Response(serializer.errors, status=400)
+
+
+# @api_view(['GET','PUT','DELETE'])
+# def CategoryDetail(request,pk):
+#     if request.method == 'GET':
+#         category = Category.objects.get(id=pk)
+#         serializer = CategorySerializer(category)
+#         return Response(serializer.data)
+    
+#     if request.method=="PUT":
+#         category=Category.objects.get(id=pk)
+#         serializer=CategorySerializer(category,data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors,status=400)
+    
+#     if request.method=="DELETE":
+#         category=Category.objects.get(id=pk)
+#         category.delete()
+#         return Response(status=204)
